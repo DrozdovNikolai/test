@@ -13,19 +13,11 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useProducts } from '@/hooks/useProducts';
-import certificateOne from '@assets/generated_images/certificate_1.png';
-import certificateTwo from '@assets/generated_images/certificate_2.png';
-import certificateThree from '@assets/generated_images/certificate_3.png';
+import { statsSectionCertificateMap } from '@/components/data/statsSectionCertificates';
 export default function StatsSection() {
     const [selectedCertificate, setSelectedCertificate] = useState<string | null>(null);
     const [zoom, setZoom] = useState(1);
     const navigate = useNavigate();
-
-    const certificateMap: Record<string, string> = {
-        'certificate_1.png': certificateOne,
-        'certificate_2.png': certificateTwo,
-        'certificate_3.png': certificateThree,
-    };
 
     // Используем хук для загрузки данных
     const { products, loading, error } = useProducts();
@@ -73,7 +65,7 @@ export default function StatsSection() {
 
     const handleOpenCertificate = (certificatePath: string) => {
         const fileName = certificatePath.split('/').pop();
-        const resolvedCertificate = fileName ? certificateMap[fileName] : undefined;
+        const resolvedCertificate = fileName ? statsSectionCertificateMap[fileName] : undefined;
         setSelectedCertificate(resolvedCertificate ?? certificatePath);
         setZoom(1);
     };

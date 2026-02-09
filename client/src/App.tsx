@@ -23,6 +23,7 @@ import PartnersPage from "@/pages/PartnersPage";
 import LoadingScreen from "@/components/LoadingScreen";
 import { waitForImages } from "@/lib/waitForImages";
 import { useState, useEffect, Suspense, lazy } from "react";
+import { statsSectionCertificateUrls } from "@/components/data/statsSectionCertificates";
 
 const LazyHome = lazy(() => import("@/pages/Home"));
 const LazyDecisions = lazy(() => import("@/pages/Decisions"));
@@ -74,7 +75,10 @@ function App() {
 
         const loadPromises = [
           new Promise(resolve => setTimeout(resolve, 1200)),
-          waitForImages({ root: document.getElementById('root') ?? document })
+          waitForImages({
+            root: document.getElementById('root') ?? document,
+            additionalUrls: statsSectionCertificateUrls
+          })
         ];
 
         await Promise.all(loadPromises);

@@ -2,6 +2,7 @@ type WaitForImagesOptions = {
   root?: Document | HTMLElement;
   timeoutMs?: number;
   includeBackgrounds?: boolean;
+  additionalUrls?: string[];
 };
 
 const extractUrlsFromCss = (value: string) => {
@@ -66,7 +67,8 @@ const waitForImageElement = (img: HTMLImageElement) =>
 export const waitForImages = async ({
   root = document,
   timeoutMs = 12000,
-  includeBackgrounds = true
+  includeBackgrounds = true,
+  additionalUrls = []
 }: WaitForImagesOptions = {}) => {
   await new Promise(requestAnimationFrame);
 
@@ -106,6 +108,12 @@ export const waitForImages = async ({
       });
     });
   }
+
+  additionalUrls.forEach(url => {
+    if (!shouldSkipUrl(url)) {
+      urls.add(url);
+    }
+  });
 
   const preloadPromises = Array.from(urls).map(preloadImage);
   const allPromises = [...imagePromises, ...preloadPromises];

@@ -33,7 +33,7 @@ app.get('/api/products', async (req, res) => {
   try {
     console.log('Fetching products from database...');
     const result = await pool.query(
-      'SELECT * FROM products ORDER BY created_at DESC'
+      'SELECT * FROM products ORDER BY id ASC'
     );
     console.log(`Found ${result.rows.length} products`);
     res.json(result.rows);

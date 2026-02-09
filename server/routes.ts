@@ -84,7 +84,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const result = await pool.query<Product>(`
         SELECT * FROM products 
-        ORDER BY created_at DESC
+        ORDER BY id ASC
       `);
       
       res.json({
@@ -107,7 +107,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { q } = req.query;
 
       if (!q || typeof q !== "string") {
-        const result = await pool.query<Product>("SELECT * FROM products ORDER BY created_at DESC");
+        const result = await pool.query<Product>("SELECT * FROM products ORDER BY id ASC");
         return res.json({
           success: true,
           data: result.rows,
@@ -123,7 +123,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           description ILIKE $1 OR 
           short_description ILIKE $1 OR
           platform ILIKE $1
-        ORDER BY created_at DESC
+        ORDER BY id ASC
       `,
         [`%${q}%`]
       );
@@ -180,7 +180,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { platform } = req.params;
       const result = await pool.query<Product>(
-        "SELECT * FROM products WHERE platform ILIKE $1 ORDER BY created_at DESC",
+        "SELECT * FROM products WHERE platform ILIKE $1 ORDER BY id ASC",
         [`%${platform}%`]
       );
 
@@ -202,7 +202,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/products/with-certificates", async (req: Request, res: Response) => {
     try {
       const result = await pool.query<Product>(
-        "SELECT * FROM products WHERE certificate_image IS NOT NULL ORDER BY created_at DESC"
+        "SELECT * FROM products WHERE certificate_image IS NOT NULL ORDER BY id ASC"
       );
 
       res.json({
@@ -223,7 +223,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/products/registered", async (req: Request, res: Response) => {
     try {
       const result = await pool.query<Product>(
-        "SELECT * FROM products WHERE registration_num IS NOT NULL ORDER BY created_at DESC"
+        "SELECT * FROM products WHERE registration_num IS NOT NULL ORDER BY id ASC"
       );
 
       res.json({
