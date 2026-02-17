@@ -28,7 +28,7 @@ export function useProducts() {
                 setLoading(true);
                 setError(null);
                 
-                const response = await fetch('/api/products');
+                const response = await fetch('/apiv2/products');
                 
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);

@@ -269,7 +269,7 @@ export default function StatsSection() {
                                                             </div>
                                                             <div>
                                                                 <div className="text-xs text-brown-dark">Реестр ПО</div>
-                                                                <div className="text-xs text-brown-dark">№{product.reg_program_num}</div>
+                                                                <div className="font-mono text-sm text-brown-dark font-medium">№{product.reg_program_num}</div>
                                                             </div>
                                                         </div>
                                                     )}

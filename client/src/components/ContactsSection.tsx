@@ -10,7 +10,7 @@ import InputMask from 'react-input-mask';
 import { Link } from "react-router-dom";
 
 // URL API для бэкенда
-const API_URL = import.meta.env.VITE_API_URL || "/api";
+const API_URL = import.meta.env.VITE_API_URL || "/apiv2";
 
 export default function ContactsSection() {
   const [formData, setFormData] = useState({
@@ -126,7 +126,7 @@ export default function ContactsSection() {
         <div className="mb-10 lg:mb-16 space-y-8">
 
           <div className="w-full">
-            <div className="flex flex-col sm:flex-row justify-between items-stretch gap-3 sm:gap-4 w-full">
+            <div className="flex flex-col lg:flex-row justify-between items-stretch gap-4 lg:gap-6 w-full">
               {contactInfo.map((info, index) => {
                 const isLink = info.type === "phone" || info.type === "email";
                 const Element = isLink ? "a" : "div";
@@ -136,28 +136,28 @@ export default function ContactsSection() {
                     key={index}
                     href={isLink ? info.href : undefined}
                     className={`
-              flex items-center gap-3 sm:gap-4 p-4
+              flex items-center gap-3 md:gap-4 p-4 md:p-5
               rounded-xl 
               bg-brown-dark
               shadow-lg transition-all duration-300
               hover:shadow-2xl
               ${isLink ? 'cursor-pointer hover:bg-brown-dark/90' : ''}
-              w-full sm:w-auto sm:flex-1
+              w-full 
             `}
                   >
                     <div className={`
               flex items-center justify-center 
-              h-10 w-10 sm:h-8 sm:w-8
+              h-10 w-10 md:h-12 md:w-12
               flex-shrink-0 rounded-full
               bg-brown-dark/10 
             `}>
-                      <info.icon className="h-5 w-5 sm:h-4 sm:w-4 text-beige" />
+                      <info.icon className="h-5 w-5 md:h-6 md:w-6 text-beige" />
                     </div>
                     <div className="flex-grow min-w-0">
-                      <h4 className="font-bold text-beige mb-1 text-sm sm:text-base">
+                      <h4 className="font-bold text-beige mb-1 text-sm md:text-base">
                         {info.title}
                       </h4>
-                      <p className="text-beige text-xs sm:text-sm">
+                      <p className="text-beige text-xs md:text-sm">
                         {info.content}
                       </p>
                     </div>
@@ -167,9 +167,10 @@ export default function ContactsSection() {
             </div>
           </div>
  
-          <div className="mt-6 sm:mt-8">
+          {/* Карта */}
+          <div className="mt-6 md:mt-8">
             <div className="rounded-2xl overflow-hidden shadow-2xl">
-              <div className="h-[400px] sm:h-[450px] lg:h-[500px] w-full">
+              <div className="h-[350px] sm:h-[400px] md:h-[450px] lg:h-[500px] w-full">
                 <YMaps>
                   <Map
                     defaultState={{

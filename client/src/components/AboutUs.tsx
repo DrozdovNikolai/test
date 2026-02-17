@@ -330,20 +330,6 @@ export default function AboutUs() {
               </div>
             </div>
           </div>
-
-          <div className="pb-4">
-            <p className="text-sm sm:text-base font-bold text-brown-dark -light mb-3 text-justify">
-              Информация о наличии разрешения на обработку фискальных данных:
-            </p>
-
-            <div className="space-y-4 mt-4">
-              <div>
-                <p className="text-sm sm:text-base font-medium text-brown-dark  mb-6 text-justify">
-                  ООО «ПРОФ ИТ» не является оператором фискальных данных и не ведет их обработку
-                </p>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
     </section>

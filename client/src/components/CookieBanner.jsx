@@ -1,12 +1,10 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 
 const CookieBanner = ({ canShow = true }) => {
   const [isVisible, setIsVisible] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
-
-  const navigate = useNavigate();
 
   useEffect(() => {
     if (!canShow) {
@@ -39,10 +37,6 @@ const CookieBanner = ({ canShow = true }) => {
     setTimeout(() => setIsVisible(false), 300);
   };
 
-  const handleDetails = () => {
-    window.location.href = '/dataProcessing';
-  };
-
   if (!isVisible) return null;
 
   return (
@@ -63,12 +57,12 @@ const CookieBanner = ({ canShow = true }) => {
                 </h3>
                 <p className="text-gray-600 text-sm md:text-base">
                   На нашем сайте используются cookie-файлы, в том числе сервисов веб-аналитики. Используя сайт, вы соглашаетесь на обработку персональных данных при помощи cookie-файлов. Подробнее об обработке персональных данных вы можете узнать в {' '}
-                  <button
-                    onClick={handleDetails}
+                  <Link
+                    to="/dataProcessing"
                     className="text-brown-dark hover:text-brown underline font-medium transition-colors cursor-pointer"
                   >
                     Политике конфиденциальности
-                  </button>.
+                  </Link>.
                 </p>
               </div>
 
