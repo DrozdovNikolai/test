@@ -30,7 +30,7 @@ EXPOSE 3000
 
 # Basic healthcheck (uses Node 20 global fetch)
 HEALTHCHECK --interval=10s --timeout=3s --start-period=20s --retries=5 \
-  CMD node -e "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+  CMD node -e "const on=(process.env.TLS_ENABLED||'').toLowerCase();const tls=['1','true','yes','on'].includes(on);const mod=tls?require('node:https'):require('node:http');const req=mod.request({hostname:'127.0.0.1',port:Number(process.env.PORT||3000),path:'/api/health',method:'GET',...(tls?{rejectUnauthorized:false}:{})},res=>process.exit(res.statusCode&&res.statusCode<400?0:1));req.on('error',()=>process.exit(1));req.end();"
 
 USER node
 CMD ["node", "dist/index.js"]

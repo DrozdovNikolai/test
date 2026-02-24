@@ -1,10 +1,8 @@
 import type { Express, Request, Response } from "express";
-import { createServer, type Server } from "http";
 import { Pool } from "pg";
 import dotenv from "dotenv";
 import productsRouter from "../server/products"; // Исправленный путь
-import express from 'express'; // Добавьте этот импорт
-import path from 'path';
+import express from "express";
 import { requireAdminKey } from "./auth";
 
 dotenv.config();
@@ -54,7 +52,7 @@ interface UpdateProductDTO {
   platform?: string;
 }
 
-export async function registerRoutes(app: Express): Promise<Server> {
+export async function registerRoutes(app: Express): Promise<void> {
   // Простой вариант - относительные пути
   app.use(express.static('.'));
 
@@ -495,7 +493,4 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  const httpServer = createServer(app);
-
-  return httpServer;
 }

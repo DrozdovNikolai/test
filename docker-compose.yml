@@ -30,14 +30,21 @@ services:
     environment:
       PUBLIC_BASE_PATH: ${PUBLIC_BASE_PATH:-/}
       PORT: 3000
+      TLS_ENABLED: ${TLS_ENABLED:-true}
+      TLS_KEY_PATH: ${TLS_KEY_PATH:-/run/tls/tls.key}
+      TLS_CERT_PATH: ${TLS_CERT_PATH:-/run/tls/tls.crt}
+      TLS_CA_PATH: ${TLS_CA_PATH:-}
+      TLS_PASSPHRASE: ${TLS_PASSPHRASE:-}
       DB_HOST: db
       DB_PORT: 5432
       DB_NAME: ${POSTGRES_DB}
       DB_USER: ${POSTGRES_USER}
       DB_PASSWORD: ${POSTGRES_PASSWORD}
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+    volumes:
+      - ./tls:/run/tls:ro
     ports:
-      - "127.0.0.1:${APP_PORT:-3000}:3000"
+      - "127.0.0.1:${APP_PORT:-443}:3000"
     depends_on:
       db:
         condition: service_healthy
