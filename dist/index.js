@@ -1,6 +1,3 @@
-// server/index.ts
-import express3 from "express";
-
 // server/routes.ts
 import { createServer } from "http";
 import { Pool as Pool2 } from "pg";
@@ -26,6 +23,41 @@ var products_default = router;
 
 // server/routes.ts
 import express from "express";
+
+// server/auth.ts
+import { timingSafeEqual } from "crypto";
+function getBearerToken(authHeader) {
+  if (!authHeader) return void 0;
+  const match = authHeader.match(/^Bearer\s+(.+)$/i);
+  return match?.[1];
+}
+function safeEqual(a, b) {
+  const aBuf = Buffer.from(a);
+  const bBuf = Buffer.from(b);
+  if (aBuf.length !== bBuf.length) return false;
+  return timingSafeEqual(aBuf, bBuf);
+}
+function requireAdminKey() {
+  return (req, res, next) => {
+    const adminKey = process.env.ADMIN_API_KEY;
+    if (!adminKey) {
+      if (process.env.NODE_ENV === "production") {
+        return res.status(503).json({
+          success: false,
+          message: "ADMIN_API_KEY is not set (write endpoints disabled)"
+        });
+      }
+      return next();
+    }
+    const providedKey = req.get("x-admin-key") || getBearerToken(req.get("authorization"));
+    if (providedKey && safeEqual(providedKey, adminKey)) {
+      return next();
+    }
+    return res.status(401).json({ success: false, message: "Unauthorized" });
+  };
+}
+
+// server/routes.ts
 dotenv2.config();
 var pool2 = new Pool2({
   host: process.env.DB_HOST || "localhost",
@@ -61,7 +93,7 @@ async function registerRoutes(app2) {
     try {
       const result = await pool2.query(`
         SELECT * FROM products 
-        ORDER BY created_at DESC
+        ORDER BY id ASC
       `);
       res.json({
         success: true,
@@ -81,7 +113,7 @@ async function registerRoutes(app2) {
     try {
       const { q } = req.query;
       if (!q || typeof q !== "string") {
-        const result2 = await pool2.query("SELECT * FROM products ORDER BY created_at DESC");
+        const result2 = await pool2.query("SELECT * FROM products ORDER BY id ASC");
         return res.json({
           success: true,
           data: result2.rows,
@@ -96,7 +128,7 @@ async function registerRoutes(app2) {
           description ILIKE $1 OR 
           short_description ILIKE $1 OR
           platform ILIKE $1
-        ORDER BY created_at DESC
+        ORDER BY id ASC
       `,
         [`%${q}%`]
       );
@@ -110,6 +142,91 @@ async function registerRoutes(app2) {
       res.status(500).json({
         success: false,
         message: "\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u043F\u043E\u0438\u0441\u043A\u0435 \u043F\u0440\u043E\u0434\u0443\u043A\u0442\u043E\u0432"
+      });
+    }
+  });
+  app2.get("/api/products/stats", async (req, res) => {
+    try {
+      const [totalResult, certificatesResult, registeredResult, platformResult] = await Promise.all([
+        pool2.query("SELECT COUNT(*) as count FROM products"),
+        pool2.query("SELECT COUNT(*) as count FROM products WHERE certificate_image IS NOT NULL"),
+        pool2.query("SELECT COUNT(*) as count FROM products WHERE registration_num IS NOT NULL"),
+        pool2.query("SELECT platform, COUNT(*) as count FROM products GROUP BY platform")
+      ]);
+      const byPlatform = {};
+      platformResult.rows.forEach((row) => {
+        byPlatform[row.platform] = parseInt(row.count);
+      });
+      res.json({
+        success: true,
+        data: {
+          total: parseInt(totalResult.rows[0].count),
+          withCertificates: parseInt(certificatesResult.rows[0].count),
+          registered: parseInt(registeredResult.rows[0].count),
+          byPlatform
+        }
+      });
+    } catch (error) {
+      console.error("Stats error:", error);
+      res.status(500).json({
+        success: false,
+        message: "\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u043F\u043E\u043B\u0443\u0447\u0435\u043D\u0438\u0438 \u0441\u0442\u0430\u0442\u0438\u0441\u0442\u0438\u043A\u0438"
+      });
+    }
+  });
+  app2.get("/api/products/platform/:platform", async (req, res) => {
+    try {
+      const { platform } = req.params;
+      const result = await pool2.query(
+        "SELECT * FROM products WHERE platform ILIKE $1 ORDER BY id ASC",
+        [`%${platform}%`]
+      );
+      res.json({
+        success: true,
+        data: result.rows,
+        count: result.rows.length
+      });
+    } catch (error) {
+      console.error("Platform filter error:", error);
+      res.status(500).json({
+        success: false,
+        message: "\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u0444\u0438\u043B\u044C\u0442\u0440\u0430\u0446\u0438\u0438 \u043F\u043E \u043F\u043B\u0430\u0442\u0444\u043E\u0440\u043C\u0435"
+      });
+    }
+  });
+  app2.get("/api/products/with-certificates", async (req, res) => {
+    try {
+      const result = await pool2.query(
+        "SELECT * FROM products WHERE certificate_image IS NOT NULL ORDER BY id ASC"
+      );
+      res.json({
+        success: true,
+        data: result.rows,
+        count: result.rows.length
+      });
+    } catch (error) {
+      console.error("Certificates error:", error);
+      res.status(500).json({
+        success: false,
+        message: "\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u043F\u043E\u043B\u0443\u0447\u0435\u043D\u0438\u0438 \u043F\u0440\u043E\u0434\u0443\u043A\u0442\u043E\u0432 \u0441 \u0441\u0435\u0440\u0442\u0438\u0444\u0438\u043A\u0430\u0442\u0430\u043C\u0438"
+      });
+    }
+  });
+  app2.get("/api/products/registered", async (req, res) => {
+    try {
+      const result = await pool2.query(
+        "SELECT * FROM products WHERE registration_num IS NOT NULL ORDER BY id ASC"
+      );
+      res.json({
+        success: true,
+        data: result.rows,
+        count: result.rows.length
+      });
+    } catch (error) {
+      console.error("Registered products error:", error);
+      res.status(500).json({
+        success: false,
+        message: "\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u043F\u043E\u043B\u0443\u0447\u0435\u043D\u0438\u0438 \u0437\u0430\u0440\u0435\u0433\u0438\u0441\u0442\u0440\u0438\u0440\u043E\u0432\u0430\u043D\u043D\u044B\u0445 \u043F\u0440\u043E\u0434\u0443\u043A\u0442\u043E\u0432"
       });
     }
   });
@@ -141,7 +258,7 @@ async function registerRoutes(app2) {
       });
     }
   });
-  app2.post("/api/products", async (req, res) => {
+  app2.post("/api/products", requireAdminKey(), async (req, res) => {
     try {
       const productData = req.body;
       if (!productData.title || !productData.description || !productData.short_description || !productData.platform) {
@@ -183,7 +300,7 @@ async function registerRoutes(app2) {
       });
     }
   });
-  app2.put("/api/products/:id", async (req, res) => {
+  app2.put("/api/products/:id", requireAdminKey(), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -237,7 +354,7 @@ async function registerRoutes(app2) {
       });
     }
   });
-  app2.delete("/api/products/:id", async (req, res) => {
+  app2.delete("/api/products/:id", requireAdminKey(), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -266,36 +383,7 @@ async function registerRoutes(app2) {
       });
     }
   });
-  app2.get("/api/products/stats", async (req, res) => {
-    try {
-      const [totalResult, certificatesResult, registeredResult, platformResult] = await Promise.all([
-        pool2.query("SELECT COUNT(*) as count FROM products"),
-        pool2.query("SELECT COUNT(*) as count FROM products WHERE certificate_image IS NOT NULL"),
-        pool2.query("SELECT COUNT(*) as count FROM products WHERE registration_num IS NOT NULL"),
-        pool2.query("SELECT platform, COUNT(*) as count FROM products GROUP BY platform")
-      ]);
-      const byPlatform = {};
-      platformResult.rows.forEach((row) => {
-        byPlatform[row.platform] = parseInt(row.count);
-      });
-      res.json({
-        success: true,
-        data: {
-          total: parseInt(totalResult.rows[0].count),
-          withCertificates: parseInt(certificatesResult.rows[0].count),
-          registered: parseInt(registeredResult.rows[0].count),
-          byPlatform
-        }
-      });
-    } catch (error) {
-      console.error("Stats error:", error);
-      res.status(500).json({
-        success: false,
-        message: "\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u043F\u043E\u043B\u0443\u0447\u0435\u043D\u0438\u0438 \u0441\u0442\u0430\u0442\u0438\u0441\u0442\u0438\u043A\u0438"
-      });
-    }
-  });
-  app2.get("/api/test-db", async (_req, res) => {
+  app2.get("/api/test-db", requireAdminKey(), async (_req, res) => {
     try {
       await pool2.query(`
         CREATE TABLE IF NOT EXISTS test_table (
@@ -322,63 +410,7 @@ async function registerRoutes(app2) {
       });
     }
   });
-  app2.get("/api/products/platform/:platform", async (req, res) => {
-    try {
-      const { platform } = req.params;
-      const result = await pool2.query(
-        "SELECT * FROM products WHERE platform ILIKE $1 ORDER BY created_at DESC",
-        [`%${platform}%`]
-      );
-      res.json({
-        success: true,
-        data: result.rows,
-        count: result.rows.length
-      });
-    } catch (error) {
-      console.error("Platform filter error:", error);
-      res.status(500).json({
-        success: false,
-        message: "\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u0444\u0438\u043B\u044C\u0442\u0440\u0430\u0446\u0438\u0438 \u043F\u043E \u043F\u043B\u0430\u0442\u0444\u043E\u0440\u043C\u0435"
-      });
-    }
-  });
-  app2.get("/api/products/with-certificates", async (req, res) => {
-    try {
-      const result = await pool2.query(
-        "SELECT * FROM products WHERE certificate_image IS NOT NULL ORDER BY created_at DESC"
-      );
-      res.json({
-        success: true,
-        data: result.rows,
-        count: result.rows.length
-      });
-    } catch (error) {
-      console.error("Certificates error:", error);
-      res.status(500).json({
-        success: false,
-        message: "\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u043F\u043E\u043B\u0443\u0447\u0435\u043D\u0438\u0438 \u043F\u0440\u043E\u0434\u0443\u043A\u0442\u043E\u0432 \u0441 \u0441\u0435\u0440\u0442\u0438\u0444\u0438\u043A\u0430\u0442\u0430\u043C\u0438"
-      });
-    }
-  });
-  app2.get("/api/products/registered", async (req, res) => {
-    try {
-      const result = await pool2.query(
-        "SELECT * FROM products WHERE registration_num IS NOT NULL ORDER BY created_at DESC"
-      );
-      res.json({
-        success: true,
-        data: result.rows,
-        count: result.rows.length
-      });
-    } catch (error) {
-      console.error("Registered products error:", error);
-      res.status(500).json({
-        success: false,
-        message: "\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u043F\u043E\u043B\u0443\u0447\u0435\u043D\u0438\u0438 \u0437\u0430\u0440\u0435\u0433\u0438\u0441\u0442\u0440\u0438\u0440\u043E\u0432\u0430\u043D\u043D\u044B\u0445 \u043F\u0440\u043E\u0434\u0443\u043A\u0442\u043E\u0432"
-      });
-    }
-  });
-  app2.post("/api/init-db", async (_req, res) => {
+  app2.post("/api/init-db", requireAdminKey(), async (_req, res) => {
     try {
       await pool2.query(`
         CREATE TABLE IF NOT EXISTS products (
@@ -413,82 +445,7 @@ async function registerRoutes(app2) {
 // server/vite.ts
 import express2 from "express";
 import fs from "fs";
-import path2 from "path";
-import { createServer as createViteServer, createLogger } from "vite";
-
-// vite.config.ts
-import { defineConfig, normalizePath } from "vite";
-import react from "@vitejs/plugin-react";
 import path from "path";
-import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
-import { viteStaticCopy } from "vite-plugin-static-copy";
-var vite_config_default = defineConfig({
-  base: "/prof2/",
-  plugins: [
-    react(),
-    runtimeErrorOverlay(),
-    viteStaticCopy({
-      targets: [
-        {
-          src: `${normalizePath(path.resolve(import.meta.dirname, "attached_assets"))}/**/*`,
-          dest: "attached_assets"
-        }
-      ]
-    }),
-    ...process.env.NODE_ENV !== "production" && process.env.REPL_ID !== void 0 ? [
-      await import("@replit/vite-plugin-cartographer").then(
-        (m) => m.cartographer()
-      )
-    ] : []
-  ],
-  resolve: {
-    alias: {
-      "@": path.resolve(import.meta.dirname, "client", "src"),
-      "@shared": path.resolve(import.meta.dirname, "shared"),
-      "@assets": path.resolve(import.meta.dirname, "attached_assets")
-    }
-  },
-  root: path.resolve(import.meta.dirname, "client"),
-  build: {
-    outDir: path.resolve(import.meta.dirname, "dist/public"),
-    emptyOutDir: true,
-    // Оптимизация для production
-    rollupOptions: {
-      output: {
-        manualChunks: {
-          vendor: ["react", "react-dom", "react-router-dom"]
-        }
-      }
-    }
-  },
-  server: {
-    fs: {
-      strict: true,
-      deny: ["**/.*"]
-    },
-    // Проксирование API запросов на сервер
-    proxy: {
-      "/api": {
-        target: "http://localhost:3000",
-        changeOrigin: true,
-        secure: false,
-        rewrite: (path3) => path3
-      }
-    },
-    // Настройки для разработки
-    port: 5173,
-    strictPort: true,
-    open: true
-  },
-  // Переменные окружения для клиента
-  define: {
-    "process.env": process.env
-  }
-});
-
-// server/vite.ts
-import { nanoid } from "nanoid";
-var viteLogger = createLogger();
 function log(message, source = "express") {
   const formattedTime = (/* @__PURE__ */ new Date()).toLocaleTimeString("en-US", {
     hour: "numeric",
@@ -499,13 +456,20 @@ function log(message, source = "express") {
   console.log(`${formattedTime} [${source}] ${message}`);
 }
 async function setupVite(app2, server) {
+  const vitePkg = "vite";
+  const { createServer: createViteServer, createLogger } = await import(vitePkg);
+  const nanoidPkg = "nanoid";
+  const { nanoid } = await import(nanoidPkg);
+  const viteConfigPath = "../vite.config";
+  const { default: viteConfig } = await import(viteConfigPath);
+  const viteLogger = createLogger();
   const serverOptions = {
     middlewareMode: true,
     hmr: { server },
     allowedHosts: true
   };
   const vite = await createViteServer({
-    ...vite_config_default,
+    ...viteConfig,
     configFile: false,
     customLogger: {
       ...viteLogger,
@@ -521,7 +485,7 @@ async function setupVite(app2, server) {
   app2.use("*", async (req, res, next) => {
     const url = req.originalUrl;
     try {
-      const clientTemplate = path2.resolve(
+      const clientTemplate = path.resolve(
         import.meta.dirname,
         "..",
         "client",
@@ -541,66 +505,84 @@ async function setupVite(app2, server) {
   });
 }
 function serveStatic(app2) {
-  const distPath = path2.resolve(import.meta.dirname, "public");
+  const distPath = path.resolve(import.meta.dirname, "public");
   if (!fs.existsSync(distPath)) {
     throw new Error(
       `Could not find the build directory: ${distPath}, make sure to build the client first`
     );
   }
-  app2.use(express2.static(distPath));
+  const basePath = process.env.PUBLIC_BASE_PATH || "/";
+  const basePathNoTrailingSlash = basePath === "/" ? "" : basePath.replace(/\/$/, "");
+  const mountPath = basePathNoTrailingSlash || "/";
+  app2.use(mountPath, express2.static(distPath));
   app2.use((req, res, next) => {
     if (req.path.startsWith("/api")) {
       return next();
     }
-    res.sendFile(path2.resolve(distPath, "index.html"));
+    if (basePathNoTrailingSlash && !req.path.startsWith(basePathNoTrailingSlash)) {
+      const originalUrl = req.originalUrl.startsWith("/") ? req.originalUrl : `/${req.originalUrl}`;
+      return res.redirect(302, `${basePathNoTrailingSlash}${originalUrl}`);
+    }
+    res.sendFile(path.resolve(distPath, "index.html"));
+  });
+}
+
+// server/app.ts
+import cors from "cors";
+import dotenv3 from "dotenv";
+import express3 from "express";
+dotenv3.config();
+function createApp() {
+  const app2 = express3();
+  app2.use(
+    cors({
+      origin: process.env.CORS_ORIGIN || "http://localhost:5173",
+      credentials: true
+    })
+  );
+  app2.use(express3.json());
+  app2.use(express3.urlencoded({ extended: false }));
+  app2.use((req, res, next) => {
+    const start = Date.now();
+    const path2 = req.path;
+    let capturedJsonResponse = void 0;
+    const originalResJson = res.json;
+    res.json = function(bodyJson, ...args) {
+      capturedJsonResponse = bodyJson;
+      return originalResJson.apply(res, [bodyJson, ...args]);
+    };
+    res.on("finish", () => {
+      const duration = Date.now() - start;
+      if (path2.startsWith("/api")) {
+        let logLine = `${req.method} ${path2} ${res.statusCode} in ${duration}ms`;
+        if (capturedJsonResponse) {
+          logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
+        }
+        if (logLine.length > 80) {
+          logLine = logLine.slice(0, 79) + "\u2026";
+        }
+        log(logLine);
+      }
+    });
+    next();
+  });
+  return app2;
+}
+function registerErrorHandler(app2) {
+  app2.use((err, _req, res, _next) => {
+    const status = err.status || err.statusCode || 500;
+    const message = err.message || "Internal Server Error";
+    console.error("Server error:", err);
+    res.status(status).json({
+      success: false,
+      message,
+      ...process.env.NODE_ENV === "development" && { stack: err.stack }
+    });
   });
 }
 
 // server/index.ts
-import cors from "cors";
-import dotenv3 from "dotenv";
-dotenv3.config();
-var app = express3();
-app.use(cors({
-  origin: process.env.CORS_ORIGIN || "http://localhost:5173",
-  credentials: true
-}));
-app.use(express3.json());
-app.use(express3.urlencoded({ extended: false }));
-app.use((req, res, next) => {
-  const start = Date.now();
-  const path3 = req.path;
-  let capturedJsonResponse = void 0;
-  const originalResJson = res.json;
-  res.json = function(bodyJson, ...args) {
-    capturedJsonResponse = bodyJson;
-    return originalResJson.apply(res, [bodyJson, ...args]);
-  };
-  res.on("finish", () => {
-    const duration = Date.now() - start;
-    if (path3.startsWith("/api")) {
-      let logLine = `${req.method} ${path3} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
-      }
-      if (logLine.length > 80) {
-        logLine = logLine.slice(0, 79) + "\u2026";
-      }
-      log(logLine);
-    }
-  });
-  next();
-});
-app.use((err, _req, res, _next) => {
-  const status = err.status || err.statusCode || 500;
-  const message = err.message || "Internal Server Error";
-  console.error("Server error:", err);
-  res.status(status).json({
-    success: false,
-    message,
-    ...process.env.NODE_ENV === "development" && { stack: err.stack }
-  });
-});
+var app = createApp();
 (async () => {
   try {
     const server = await registerRoutes(app);
@@ -609,6 +591,7 @@ app.use((err, _req, res, _next) => {
     } else {
       serveStatic(app);
     }
+    registerErrorHandler(app);
     const port = parseInt(process.env.PORT || "3000", 10);
     server.listen(port, () => {
       console.log(`\u{1F680} \u0421\u0435\u0440\u0432\u0435\u0440 \u0437\u0430\u043F\u0443\u0449\u0435\u043D \u043D\u0430 http://localhost:${port}`);

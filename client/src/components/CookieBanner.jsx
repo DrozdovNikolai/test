@@ -57,7 +57,7 @@ const CookieBanner = ({ canShow = true }) => {
                 </h3>
                 <p className="text-gray-600 text-sm md:text-base">
                   На нашем сайте используются cookie-файлы, в том числе сервисов веб-аналитики. Используя сайт, вы соглашаетесь на обработку персональных данных при помощи cookie-файлов. Подробнее об обработке персональных данных вы можете узнать в {' '}
-                  <Link
+                   <Link
                     to="/dataProcessing"
                     className="text-brown-dark hover:text-brown underline font-medium transition-colors cursor-pointer"
                   >
