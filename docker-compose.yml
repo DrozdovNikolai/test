@@ -16,6 +16,8 @@ services:
       interval: 5s
       timeout: 3s
       retries: 20
+    networks:
+      - app_net
 
   backend:
     build:
@@ -48,6 +50,12 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    networks:
+      - app_net
 
 volumes:
   pgdata:
+
+networks:
+  app_net:
+    driver: bridge
