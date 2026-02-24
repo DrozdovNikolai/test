@@ -30,7 +30,7 @@ EXPOSE 3000
 
 # Basic healthcheck (uses Node 20 global fetch)
 HEALTHCHECK --interval=10s --timeout=3s --start-period=20s --retries=5 \
-  CMD node -e "const on=(process.env.TLS_ENABLED||'').toLowerCase();const tls=['1','true','yes','on'].includes(on);const mod=tls?require('node:https'):require('node:http');const req=mod.request({hostname:'127.0.0.1',port:Number(process.env.PORT||3000),path:'/api/health',method:'GET',...(tls?{rejectUnauthorized:false}:{})},res=>process.exit(res.statusCode&&res.statusCode<400?0:1));req.on('error',()=>process.exit(1));req.end();"
+  CMD node -e "const fs=require('node:fs');const enabled=['1','true','yes','on'].includes((process.env.HEALTHCHECK_ENABLED||'true').toLowerCase());if(!enabled){process.exit(0);}const runOnce=['1','true','yes','on'].includes((process.env.HEALTHCHECK_RUN_ONCE||'true').toLowerCase());const marker=process.env.HEALTHCHECK_MARKER_PATH||'/tmp/.backend-healthcheck-ok';if(runOnce&&fs.existsSync(marker)){process.exit(0);}const tls=['1','true','yes','on'].includes((process.env.TLS_ENABLED||'').toLowerCase());const mod=tls?require('node:https'):require('node:http');const req=mod.request({hostname:'127.0.0.1',port:Number(process.env.PORT||3000),path:'/api/health',method:'GET',...(tls?{rejectUnauthorized:false}:{})},res=>{const ok=Boolean(res.statusCode&&res.statusCode<400);if(ok&&runOnce){try{fs.writeFileSync(marker,new Date().toISOString());}catch{}}process.exit(ok?0:1);});req.on('error',()=>process.exit(1));req.end();"
 
 USER node
 CMD ["node", "dist/index.js"]

@@ -29,6 +29,11 @@
 - `TLS_CA_PATH` — опционально, путь к CA chain
 - `TLS_PASSPHRASE` — опционально, passphrase для ключа
 
+## Healthcheck переменные
+- `HEALTHCHECK_ENABLED=true|false` — полностью включить/выключить проверку здоровья backend.
+- `HEALTHCHECK_RUN_ONCE=true|false` — после первого успешного healthcheck создать marker и дальше возвращать `healthy` без повторной сетевой проверки.
+- `HEALTHCHECK_MARKER_PATH` — путь к marker-файлу в контейнере (по умолчанию `/tmp/.backend-healthcheck-ok`).
+
 ## Данные БД
 - Данные Postgres сохраняются в volume `pgdata`
 - Первый запуск на пустом volume применяет `db/init.sql`

@@ -37,6 +37,9 @@ services:
       TLS_CERT_PATH: ${TLS_CERT_PATH:-/run/tls/tls.crt}
       TLS_CA_PATH: ${TLS_CA_PATH:-}
       TLS_PASSPHRASE: ${TLS_PASSPHRASE:-}
+      HEALTHCHECK_ENABLED: ${HEALTHCHECK_ENABLED:-true}
+      HEALTHCHECK_RUN_ONCE: ${HEALTHCHECK_RUN_ONCE:-true}
+      HEALTHCHECK_MARKER_PATH: ${HEALTHCHECK_MARKER_PATH:-/tmp/.backend-healthcheck-ok}
       DB_HOST: db
       DB_PORT: 5432
       DB_NAME: ${POSTGRES_DB}
